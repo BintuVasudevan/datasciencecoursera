@@ -1,0 +1,80 @@
+---
+title: "PracticalML Cource Project"
+author: "Bintu G. vasudevan"
+date: "Sunday, September 21, 2014"
+output: html_document
+---
+###Executive Summary###
+
+The goal of the project is to use the machine learning algorithm and predict the class in weight lifting exercises dataset.
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+Six young health participants were asked to perform barbell lifts (correctly and incorrectly in 5 different ways). Set of 10 repetitions, exactly according to the specification (class A), throwing the elbow to the front (Class B), lifting the dumbell only halfway (Class C), lowering the dumbell only halfway (Class D) and throwing the hips to the front (Class E). Class A correspond to the specified execution of the exercise, while the other 4 classes correspond to common mistakes. Participants were supervised by an experienced weight lifter to make sure the execution complied to the manner they were supposed to simulate.
+
+In this project, the goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants and predict the specified execution either of class (A,B,C,D,E).  
+
+More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+Dateset reference: "Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013."
+
+### Filtering the Data###
+
+The data set consist of 19622 data points collected on 160 predictors. The data is pre-processed for removal of the values "#DIV/0!" and "NA" in various columns. After filtering data set reduced to 19622 data points with 60 predictors. Further selecting data from accelerometers on the belt, forearm, arm, and dumbell The final data set reduced to **19622** data points with **53** predictors.
+
+###Model Building###
+
+For this project given is the Training dataset for model building and the Testing dataset for evaluation. The training dataset is first split into two groups: a training set and a test set for model building and fine tuning. Another dataset called Testing is given to apply the predition and is used for evaluation purpose.
+
+After appling the filter as explain in the above section, the data were spli into two groups using the create data partition function from caret package. Training dataset in partition into 80% trainging sample and 20% test sample. The dimension of training and testing dataset are: dim(training) = 15699 of 53 predictors and dim(testing) = 3923 of 53 predictors (including the classes)
+
+The caret package (short for classiffication and regression training) contains functions to streamline the model training process for complex regression and classiffication problems.  
+The Recursive PARTitioning or rpart programs build classification or regression models of a very general structure using a two stage procedure; the resulting models can be represented as binary trees.
+The rpart model function from the caret package has been used to develop the model. The initial model is build with the "classe" as response variable and rest all the variable as the predictor variables. 
+
+The rpart funcation have default values. However, some parameter have been customized like setting the tuning parameter to 20, this generate the candidate set of parameter values and tuneLength argument controls how many to evaluated. A train control function is use to modify the resampling method as "repeatedcv" with default 10-fold cross-validation. All the data is normalized uisng the perProcess("Center","Scale") 
+
+By default the methods for measuring performance if unspeciffied, overall accuracy and the kappa statistics are computed. (For regression models, root mean square error and $R^2$ are computed.) The parameter to tain the model using the "rpart" is  then:
+
+```{r}
+#ctrl <- trainControl(method="repeatedcv", repeats=3)
+#rpFit <- train(classe ~ . , data= training, method= "rpart", 
+#                           tuneLength = 20, trControl=ctrl, 
+#                           preProcess("center","scale"))
+```
+
+The print model "rpFit" is the result of average resampled estimate of performance is shown. At the bottom it also tell the accuracy and cp values. It shows the accuracy of 80% and cp = 0.0060. This model is then used to predict new values.
+
+```{r}
+load("rpFit_model.rda")
+testing = read.csv("testing.csv")
+testing=testing[c(2:54)]
+dim(testing)
+library(caret)
+attach(rpFit)
+confusionMatrix(testing$classe,predict(rpFit,newdata=testing))   
+plot(rpFit)
+```
+Figure 1. Plot(rpFit) shows the relationship between the number of rpart compoments and the accuracy versus the cp.
+
+Figure 1. shows the acuuracy of average of 10-fold reprated cross-validation on the vertical axis and the complexity parameter cp in the horrizontal axis. The curve is the average accuracy or each values of the complexity parameter cp. Because 10 folds of cross-validation are used It will show 10 accuracy at a given value of complexity parameter (one for each fold). This means we can calculate both the mean and standard deviation of the cuuracy for each value of the complexity.
+
+###Predicting on the test dataset###
+
+Tesig data given in this project assignment is used to predict the values. The data is first filter it was done for training data and then use the mode "rpFit" to predict the values. Below is R snippet of the code
+
+```{r}
+harTestdata <- read.csv("pml-testing.csv")
+harTestdataFiltered <- harTestdata[,colSums(is.na(harTestdata))==0]
+dim(harTestdataFiltered)
+testingEval = harTestdataFiltered[,c(8:60)]
+testingEval[,c(1:52)] <- apply(testingEval[,c(1:52)], 2, function(x) as.numeric(x));
+dim(testingEval)
+#load("rpFit_model.rda")
+predEVal = predict(rpFit, newdata = testingEval)
+predEVal
+```
+
+##Conclusion##
+Recursive PARTitionin technique was used for predicting the classe, with overall accuracy of 77%. The confusion matrix is as shown above. The 20 predicted values on the testing data given for the project is shown above.
+
+
